@@ -27,6 +27,16 @@ func main() {
 		log.Fatalf("error creating channel: %s", err)
 	}
 
+	_, _, err = pubsub.DeclareAndBind(
+		connection,
+		routing.ExchangePerilTopic,
+		routing.GameLogSlug,
+		fmt.Sprintf("%s.*", routing.GameLogSlug),
+		pubsub.Durable)
+	if err != nil {
+		log.Fatalf("error binding logs queue: %v", err)
+	}
+
 	for {
 		words := gamelogic.GetInput()
 		if len(words) == 0 {

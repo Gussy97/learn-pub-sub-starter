@@ -5,7 +5,9 @@ const (
 
 	WarRecognitionsPrefix = "war"
 
-	PauseKey = "pause"
+	PauseKey  = "pause"
+	ResumeKey = "resume"
+	QuitKey   = "quit"
 
 	GameLogSlug = "game_logs"
 )

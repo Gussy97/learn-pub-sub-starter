@@ -32,7 +32,7 @@ func main() {
 		routing.ExchangePerilTopic,
 		routing.GameLogSlug,
 		fmt.Sprintf("%s.*", routing.GameLogSlug),
-		pubsub.Durable)
+		pubsub.SimpleQueueDurable)
 	if err != nil {
 		log.Fatalf("error binding logs queue: %v", err)
 	}

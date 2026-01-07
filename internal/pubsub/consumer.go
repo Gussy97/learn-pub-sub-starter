@@ -13,7 +13,7 @@ func SubscribeJSON[T any](
 	queueName,
 	key string,
 	queueType SimpleQueueType,
-	handler func(T),
+	handler func(T) Acktype,
 ) error {
 	ch, queue, err := DeclareAndBind(conn, exchange, queueName, key, queueType)
 	if err != nil {
@@ -25,18 +25,29 @@ func SubscribeJSON[T any](
 		return fmt.Errorf("error consuming channel: %v", err)
 	}
 
+	unmarsheller := func(data []byte) (T, error) {
+		var target T
+		err := json.Unmarshal(data, &target)
+		return target, err
+	}
 	go func() {
 		defer ch.Close()
 		for del := range delCh {
-			var obj T
-			err = json.Unmarshal(del.Body, &obj)
+			target, err := unmarsheller(del.Body)
 			if err != nil {
-				fmt.Printf("error unmarshling data: %v\n", err)
+				fmt.Printf("could not unmarshal message: %v\n", err)
+				continue
 			}
-			handler(obj)
-			err = del.Ack(false)
-			if err != nil {
-				fmt.Printf("error acknowledging message: %v\n", err)
+			switch handler(target) {
+			case Ack:
+				del.Ack(false)
+				fmt.Println("Ack")
+			case NackDiscard:
+				del.Nack(false, false)
+				fmt.Println("NackDiscard")
+			case NackRequeue:
+				del.Nack(false, true)
+				fmt.Println("NackRequeue")
 			}
 		}
 	}()

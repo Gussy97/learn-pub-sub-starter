@@ -34,7 +34,7 @@ func main() {
 		routing.ExchangePerilDirect,
 		fmt.Sprintf("%s.%s", routing.PauseKey, username),
 		routing.PauseKey,
-		pubsub.Transient,
+		pubsub.SimpleQueueTransient,
 		handlerPause(gs),
 	)
 	if err != nil {
@@ -46,7 +46,7 @@ func main() {
 		routing.ExchangePerilTopic,
 		fmt.Sprintf("%s.%s", routing.ArmyMovesPrefix, username),
 		routing.ArmyMovesPrefix+".*",
-		pubsub.Transient,
+		pubsub.SimpleQueueTransient,
 		handlerMove(gs),
 	)
 	if err != nil {

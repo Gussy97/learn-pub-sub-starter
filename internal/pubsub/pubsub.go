@@ -29,16 +29,15 @@ func DeclareAndBind(
 	if err != nil {
 		return nil, amqp.Queue{}, err
 	}
-	durable := true
-	autoDelete := false
-	exclusive := false
-	if queueType == "transient" {
-		durable = true
-		autoDelete = true
-		exclusive = true
-	}
 
-	queue, err := ch.QueueDeclare(queueName, durable, autoDelete, exclusive, false, nil)
+	queue, err := ch.QueueDeclare(
+		queueName,
+		queueType == SimpleQueueDurable,
+		queueType != SimpleQueueDurable,
+		queueType != SimpleQueueDurable,
+		false,
+		nil,
+	)
 	if err != nil {
 		return nil, amqp.Queue{}, err
 	}
@@ -50,9 +49,17 @@ func DeclareAndBind(
 	return ch, queue, nil
 }
 
-type SimpleQueueType string
+type SimpleQueueType int
 
 const (
-	Durable   SimpleQueueType = "durable"
-	Transient SimpleQueueType = "transient"
+	SimpleQueueDurable SimpleQueueType = iota
+	SimpleQueueTransient
+)
+
+type Acktype int
+
+const (
+	Ack Acktype = iota
+	NackDiscard
+	NackRequeue
 )

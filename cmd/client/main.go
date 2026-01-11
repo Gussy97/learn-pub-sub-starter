@@ -27,6 +27,11 @@ func main() {
 		log.Fatalf("error setting username: %v", err)
 	}
 
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Fatalf("error creating channel: %v", err)
+	}
+
 	gs := gamelogic.NewGameState(username)
 
 	err = pubsub.SubscribeJSON(
@@ -47,15 +52,22 @@ func main() {
 		fmt.Sprintf("%s.%s", routing.ArmyMovesPrefix, username),
 		routing.ArmyMovesPrefix+".*",
 		pubsub.SimpleQueueTransient,
-		handlerMove(gs),
+		handlerMove(gs, ch),
 	)
 	if err != nil {
 		log.Fatalf("error subscribing to moves queue: %v", err)
 	}
 
-	ch, err := conn.Channel()
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		routing.WarRecognitionsPrefix,
+		routing.WarRecognitionsPrefix+".*",
+		pubsub.SimpleQueueDurable,
+		handlerWar(gs, ch),
+	)
 	if err != nil {
-		log.Fatalf("error creating channel: %v", err)
+		log.Fatalf("error subscribing to war queue", err)
 	}
 
 	for {
@@ -93,7 +105,10 @@ func main() {
 		case "help":
 			gamelogic.PrintClientHelp()
 		case "spam":
-			fmt.Println("Spamming not allowed yet!")
+			if err := gs.CommandSpam(words, ch); err != nil {
+				fmt.Println(err)
+				continue
+			}
 		case "quit":
 			gamelogic.PrintQuit()
 			return

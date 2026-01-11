@@ -1,9 +1,14 @@
 package pubsub
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
+	"fmt"
+	"time"
 
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -36,7 +41,9 @@ func DeclareAndBind(
 		queueType != SimpleQueueDurable,
 		queueType != SimpleQueueDurable,
 		false,
-		nil,
+		amqp.Table{
+			"x-dead-letter-exchange": "peril_dlx",
+		},
 	)
 	if err != nil {
 		return nil, amqp.Queue{}, err
@@ -63,3 +70,33 @@ const (
 	NackDiscard
 	NackRequeue
 )
+
+func PublishGob[T any](ch *amqp.Channel, exchange, key string, val T) error {
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+	if err := encoder.Encode(val); err != nil {
+		return fmt.Errorf("error encoding target: %v", err)
+	}
+
+	return ch.PublishWithContext(
+		context.Background(),
+		exchange,
+		key,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType: "application/gob",
+			Body:        buffer.Bytes(),
+		},
+	)
+}
+
+func PublishGameLog(ch *amqp.Channel, username, message string) error {
+	key := fmt.Sprintf("%s.%s", routing.GameLogSlug, username)
+
+	return PublishGob(ch, routing.ExchangePerilTopic, key, routing.GameLog{
+		CurrentTime: time.Now(),
+		Message:     message,
+		Username:    username,
+	})
+}

@@ -27,12 +27,14 @@ func main() {
 		log.Fatalf("error creating channel: %s", err)
 	}
 
-	_, _, err = pubsub.DeclareAndBind(
+	err = pubsub.SubscribeGob(
 		connection,
 		routing.ExchangePerilTopic,
 		routing.GameLogSlug,
 		fmt.Sprintf("%s.*", routing.GameLogSlug),
-		pubsub.SimpleQueueDurable)
+		pubsub.SimpleQueueDurable,
+		handlerGamelog(),
+	)
 	if err != nil {
 		log.Fatalf("error binding logs queue: %v", err)
 	}
